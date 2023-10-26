@@ -24,6 +24,9 @@ double vertices[MAX_VERTICES][3];
 int num_triangles = 0;
 int triangles[MAX_TRIANGLES][3];
 
+// Add a global variable to store the zoom factor
+double zoomFactor = 1.0;
+
 void rotateX(double theta) {
     double cos_theta = cos(theta);
     double sin_theta = sin(theta);
@@ -127,6 +130,7 @@ void plotTriangles() {
     }
 }
 
+
 void refresh() {
     clean();
 
@@ -154,7 +158,6 @@ void refresh() {
 void rotateAndZoom(int x, int y) {
     static int prev_x = -1;
     static int prev_y = -1;
-    static double zoomFactor = 1.0;
 
     if (vert) {
         int threshold = 40;
@@ -177,6 +180,7 @@ void rotateAndZoom(int x, int y) {
         if (prev_y != -1) {
             int y_diff = prev_y - y;
             if (abs(y_diff) > threshold / 3) {
+                // Zoom in or out based on y_diff
                 zoomFactor *= exp(0.005 * y_diff);
                 amp = SCREEN_WIDTH * zoomFactor;
                 refresh();
@@ -221,6 +225,19 @@ int main(int argc, char *argv[]) {
 
                 case SDL_MOUSEMOTION:
                     rotateAndZoom(event.motion.x, event.motion.y);
+                    break;
+                case SDL_KEYDOWN:
+                if (event.key.keysym.sym == SDLK_PLUS || event.key.keysym.sym == SDLK_KP_PLUS || event.key.keysym.sym == SDLK_EQUALS) {
+                    // Zoom in
+                    zoomFactor *= 1.1; // Adjust the zoom factor as needed
+                    amp = SCREEN_WIDTH * zoomFactor;
+                    refresh();
+                } else if (event.key.keysym.sym == SDLK_MINUS || event.key.keysym.sym == SDLK_KP_MINUS) {
+                    // Zoom out
+                    zoomFactor *= 0.9; // Adjust the zoom factor as needed
+                    amp = SCREEN_WIDTH * zoomFactor;
+                    refresh();
+                }
                     break;
             }
         }
