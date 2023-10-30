@@ -11,75 +11,75 @@
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 
-int vert = 1;
-int IMGSIZE = SCREEN_WIDTH;
-int IMGMID = SCREEN_WIDTH / 2;
-double d = 2.0;
-double amp = SCREEN_WIDTH;
-double sens = 0.005;
+int isVertexMode = 1;
+int imageSize = SCREEN_WIDTH;
+int imageMidpoint = SCREEN_WIDTH / 2;
+double depth = 2.0;
+double amplitude = SCREEN_WIDTH;
+double sensitivity = 0.005;
 SDL_Point pixels[SCREEN_WIDTH][SCREEN_HEIGHT];
 
-int num_vertices = 0;
-double vertices[MAX_VERTICES][3];
-int num_triangles = 0;
-int triangles[MAX_TRIANGLES][3];
+int numVertices = 0;
+double vertexData[MAX_VERTICES][3];
+int numTriangles = 0;
+int triangleData[MAX_TRIANGLES][3];
 
 // Add a global variable to store the zoom factor
 double zoomFactor = 1.0;
 
-void rotateX(double theta) {
-    double cos_theta = cos(theta);
-    double sin_theta = sin(theta);
-    for (int i = 0; i < num_vertices; i++) {
-        double x = vertices[i][0];
-        double y = cos_theta * vertices[i][1] - sin_theta * vertices[i][2];
-        double z = sin_theta * vertices[i][1] + cos_theta * vertices[i][2];
-        vertices[i][0] = x;
-        vertices[i][1] = y;
-        vertices[i][2] = z;
+void rotateXAxis(double theta) {
+    double cosTheta = cos(theta);
+    double sinTheta = sin(theta);
+    for (int i = 0; i < numVertices; i++) {
+        double x = vertexData[i][0];
+        double y = cosTheta * vertexData[i][1] - sinTheta * vertexData[i][2];
+        double z = sinTheta * vertexData[i][1] + cosTheta * vertexData[i][2];
+        vertexData[i][0] = x;
+        vertexData[i][1] = y;
+        vertexData[i][2] = z;
     }
 }
 
-void rotateY(double theta) {
-    double cos_theta = cos(theta);
-    double sin_theta = sin(theta);
-    for (int i = 0; i < num_vertices; i++) {
-        double x = vertices[i][2] * sin_theta + vertices[i][0] * cos_theta;
-        double y = vertices[i][1];
-        double z = -sin_theta * vertices[i][0] + cos_theta * vertices[i][2];
-        vertices[i][0] = x;
-        vertices[i][1] = y;
-        vertices[i][2] = z;
+void rotateYAxis(double theta) {
+    double cosTheta = cos(theta);
+    double sinTheta = sin(theta);
+    for (int i = 0; i < numVertices; i++) {
+        double x = vertexData[i][2] * sinTheta + vertexData[i][0] * cosTheta;
+        double y = vertexData[i][1];
+        double z = -sinTheta * vertexData[i][0] + cosTheta * vertexData[i][2];
+        vertexData[i][0] = x;
+        vertexData[i][1] = y;
+        vertexData[i][2] = z;
     }
 }
 
 void loadVerticesAndTriangles() {
-    FILE *vertices_file = fopen("face-vertices.data", "r");
-    if (vertices_file == NULL) {
+    FILE *verticesFile = fopen("face-vertices.data", "r");
+    if (verticesFile == NULL) {
         printf("Error opening vertices file\n");
         exit(1);
     }
 
-    while (fscanf(vertices_file, "%lf,%lf,%lf", &vertices[num_vertices][0], &vertices[num_vertices][1], &vertices[num_vertices][2]) == 3) {
-        num_vertices++;
+    while (fscanf(verticesFile, "%lf,%lf,%lf", &vertexData[numVertices][0], &vertexData[numVertices][1], &vertexData[numVertices][2]) == 3) {
+        numVertices++;
     }
 
-    fclose(vertices_file);
+    fclose(verticesFile);
 
-    FILE *triangles_file = fopen("face-index.txt", "r");
-    if (triangles_file == NULL) {
+    FILE *trianglesFile = fopen("face-index.txt", "r");
+    if (trianglesFile == NULL) {
         printf("Error opening triangles file\n");
         exit(1);
     }
 
-    while (fscanf(triangles_file, "%d,%d,%d", &triangles[num_triangles][0], &triangles[num_triangles][1], &triangles[num_triangles][2]) == 3) {
-        num_triangles++;
+    while (fscanf(trianglesFile, "%d,%d,%d", &triangleData[numTriangles][0], &triangleData[numTriangles][1], &triangleData[numTriangles][2]) == 3) {
+        numTriangles++;
     }
 
-    fclose(triangles_file);
+    fclose(trianglesFile);
 }
 
-void clean() {
+void resetPixels() {
     for (int i = 0; i < SCREEN_WIDTH; i++) {
         for (int j = 0; j < SCREEN_HEIGHT; j++) {
             pixels[i][j].x = 0;
@@ -97,44 +97,43 @@ void drawPixel(int x, int y) {
 }
 
 void plotVertices() {
-    for (int i = 0; i < num_vertices; i++) {
-        double zbd = vertices[i][2] / d;
-        int xp = (int)(amp * vertices[i][0] / (1.0 + zbd));
-        int yp = (int)(amp * vertices[i][1] / (1.0 - zbd));
-        drawPixel(IMGMID + xp, IMGMID - yp);
+    for (int i = 0; i < numVertices; i++) {
+        double zNormalized = vertexData[i][2] / depth;
+        int xPixel = (int)(amplitude * vertexData[i][0] / (1.0 + zNormalized));
+        int yPixel = (int)(amplitude * vertexData[i][1] / (1.0 - zNormalized));
+        drawPixel(imageMidpoint + xPixel, imageMidpoint - yPixel);
     }
 }
 
 void plotTriangles() {
-    for (int i = 0; i < num_triangles; i++) {
-        int a = triangles[i][0];
-        int b = triangles[i][1];
-        int c = triangles[i][2];
+    for (int i = 0; i < numTriangles; i++) {
+        int vertexA = triangleData[i][0];
+        int vertexB = triangleData[i][1];
+        int vertexC = triangleData[i][2];
 
-        double zbda = vertices[a][2] / d;
-        int xpa = (int)(amp * vertices[a][0] / (1.0 + zbda));
-        int ypa = (int)(amp * vertices[a][1] / (1.0 - zbda));
+        double zNormalizedA = vertexData[vertexA][2] / depth;
+        int xPixelA = (int)(amplitude * vertexData[vertexA][0] / (1.0 + zNormalizedA));
+        int yPixelA = (int)(amplitude * vertexData[vertexA][1] / (1.0 - zNormalizedA));
 
-        double zbdb = vertices[b][2] / d;
-        int xpb = (int)(amp * vertices[b][0] / (1.0 + zbdb));
-        int ypb = (int)(amp * vertices[b][1] / (1.0 - zbdb));
+        double zNormalizedB = vertexData[vertexB][2] / depth;
+        int xPixelB = (int)(amplitude * vertexData[vertexB][0] / (1.0 + zNormalizedB));
+        int yPixelB = (int)(amplitude * vertexData[vertexB][1] / (1.0 - zNormalizedB));
 
-        double zbdc = vertices[c][2] / d;
-        int xpc = (int)(amp * vertices[c][0] / (1.0 + zbdc));
-        int ypc = (int)(amp * vertices[c][1] / (1.0 - zbdc));
+        double zNormalizedC = vertexData[vertexC][2] / depth;
+        int xPixelC = (int)(amplitude * vertexData[vertexC][0] / (1.0 + zNormalizedC));
+        int yPixelC = (int)(amplitude * vertexData[vertexC][1] / (1.0 - zNormalizedC));
 
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        SDL_RenderDrawLine(renderer, IMGMID + xpa, IMGMID - ypa, IMGMID + xpb, IMGMID - ypb);
-        SDL_RenderDrawLine(renderer, IMGMID + xpa, IMGMID - ypa, IMGMID + xpc, IMGMID - ypc);
-        SDL_RenderDrawLine(renderer, IMGMID + xpc, IMGMID - ypc, IMGMID + xpb, IMGMID - ypb);
+        SDL_RenderDrawLine(renderer, imageMidpoint + xPixelA, imageMidpoint - yPixelA, imageMidpoint + xPixelB, imageMidpoint - yPixelB);
+        SDL_RenderDrawLine(renderer, imageMidpoint + xPixelA, imageMidpoint - yPixelA, imageMidpoint + xPixelC, imageMidpoint - yPixelC);
+        SDL_RenderDrawLine(renderer, imageMidpoint + xPixelC, imageMidpoint - yPixelC, imageMidpoint + xPixelB, imageMidpoint - yPixelB);
     }
 }
 
+void refreshDisplay() {
+    resetPixels();
 
-void refresh() {
-    clean();
-
-    if (vert) {
+    if (isVertexMode) {
         plotVertices();
     } else {
         plotTriangles();
@@ -155,39 +154,39 @@ void refresh() {
     SDL_RenderPresent(renderer);
 }
 
-void rotateAndZoom(int x, int y) {
-    static int prev_x = -1;
-    static int prev_y = -1;
+void handleRotationAndZoom(int x, int y) {
+    static int prevX = -1;
+    static int prevY = -1;
 
-    if (vert) {
-        int threshold = 40;
-        if (prev_x != -1) {
-            int x_diff = prev_x - x;
-            int y_diff = prev_y - y;
-            if (abs(x_diff) + abs(y_diff) > threshold) {
-                rotateX(-sens * y_diff);
-                rotateY(-sens * x_diff);
-                refresh();
-                prev_x = x;
-                prev_y = y;
+    if (isVertexMode) {
+        int rotationThreshold = 40;
+        if (prevX != -1) {
+            int xDiff = prevX - x;
+            int yDiff = prevY - y;
+            if (abs(xDiff) + abs(yDiff) > rotationThreshold) {
+                rotateXAxis(-sensitivity * yDiff);
+                rotateYAxis(-sensitivity * xDiff);
+                refreshDisplay();
+                prevX = x;
+                prevY = y;
             }
         } else {
-            prev_x = x;
-            prev_y = y;
+            prevX = x;
+            prevY = y;
         }
     } else {
-        int threshold = 60;
-        if (prev_y != -1) {
-            int y_diff = prev_y - y;
-            if (abs(y_diff) > threshold / 3) {
-                // Zoom in or out based on y_diff
-                zoomFactor *= exp(0.005 * y_diff);
-                amp = SCREEN_WIDTH * zoomFactor;
-                refresh();
-                prev_y = y;
+        int zoomThreshold = 60;
+        if (prevY != -1) {
+            int yDiff = prevY - y;
+            if (abs(yDiff) > zoomThreshold / 3) {
+                // Zoom in or out based on yDiff
+                zoomFactor *= exp(0.005 * yDiff);
+                amplitude = SCREEN_WIDTH * zoomFactor;
+                refreshDisplay();
+                prevY = y;
             }
         } else {
-            prev_y = y;
+            prevY = y;
         }
     }
 }
@@ -208,10 +207,10 @@ int main(int argc, char *argv[]) {
     }
 
     loadVerticesAndTriangles();
-    rotateX(-15 * M_PI / 180);
-    rotateY(-30 * M_PI / 180);
+    rotateXAxis(-15 * M_PI / 180);
+    rotateYAxis(-30 * M_PI / 180);
 
-    refresh();
+    refreshDisplay();
 
     SDL_Event event;
     int quit = 0;
@@ -224,20 +223,21 @@ int main(int argc, char *argv[]) {
                     break;
 
                 case SDL_MOUSEMOTION:
-                    rotateAndZoom(event.motion.x, event.motion.y);
+                    handleRotationAndZoom(event.motion.x, event.motion.y);
                     break;
+
                 case SDL_KEYDOWN:
-                if (event.key.keysym.sym == SDLK_PLUS || event.key.keysym.sym == SDLK_KP_PLUS || event.key.keysym.sym == SDLK_EQUALS) {
-                    // Zoom in
-                    zoomFactor *= 1.1; // Adjust the zoom factor as needed
-                    amp = SCREEN_WIDTH * zoomFactor;
-                    refresh();
-                } else if (event.key.keysym.sym == SDLK_MINUS || event.key.keysym.sym == SDLK_KP_MINUS) {
-                    // Zoom out
-                    zoomFactor *= 0.9; // Adjust the zoom factor as needed
-                    amp = SCREEN_WIDTH * zoomFactor;
-                    refresh();
-                }
+                    if (event.key.keysym.sym == SDLK_PLUS || event.key.keysym.sym == SDLK_KP_PLUS || event.key.keysym.sym == SDLK_EQUALS) {
+                        // Zoom in
+                        zoomFactor *= 1.1; // Adjust the zoom factor as needed
+                        amplitude = SCREEN_WIDTH * zoomFactor;
+                        refreshDisplay();
+                    } else if (event.key.keysym.sym == SDLK_MINUS || event.key.keysym.sym == SDLK_KP_MINUS) {
+                        // Zoom out
+                        zoomFactor *= 0.9; // Adjust the zoom factor as needed
+                        amplitude = SCREEN_WIDTH * zoomFactor;
+                        refreshDisplay();
+                    }
                     break;
             }
         }
